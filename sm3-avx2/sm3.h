@@ -8,7 +8,7 @@
 
 
 #if SPX_SM3_OUTPUT_BYTES < SPX_N
-    #error Linking against SHA-256 with N larger than 32 bytes is not supported
+    #error Linking against SM3 with N larger than 32 bytes is not supported
 #endif
 
 #define SPX_SM3_ADDR_BYTES 22

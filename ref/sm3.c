@@ -20,7 +20,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
 #include "utils.h"
 #include "sm3.h"
 /*

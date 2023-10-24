@@ -6,12 +6,9 @@ import sys
 from subprocess import DEVNULL, run
 
 implementations = [
-                   ('sm3-avx2', ['sm3']),      
-                    ('sha2-avx2', ['sha2']),
-                    ('ref', [ 'sha2']),
-                #    ('ref', ['shake', 'sha2', 'haraka']),
-                #    ('haraka-aesni', ['haraka']),
-                #    ('shake-avx2', ['shake']),
+                    #('sm3-avx2', ['sm3']),      
+                    #('sha2-avx2', ['sha2']),
+                    ('ref', [ 'sha2' ,'sm3']),
                    ]
 
 options = ["f", "s"]
