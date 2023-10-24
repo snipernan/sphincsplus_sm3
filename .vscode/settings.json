@@ -28,6 +28,7 @@
         "utils.h": "c",
         "params.h": "c",
         "stdint.h": "c",
-        "sm3_offsets": "c"
+        "sm3_offsets": "c",
+        "immintrin.h": "c"
     }
 }
