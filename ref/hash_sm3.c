@@ -8,17 +8,11 @@
 #include "sm3.h"
 
 
-#define SPX_SHAX_OUTPUT_BYTES SPX_SM3_OUTPUT_BYTES
-#define SPX_SHAX_BLOCK_BYTES SPX_SM3_BLOCK_BYTES
-#define shaX_inc_init sm3_inc_init
-#define shaX_inc_blocks sm3_inc_blocks
-#define shaX_inc_finalize sm3_inc_finalize
-#define shaX sm3
 #define mgf1_X mgf1_256
 
 
 
-/* For SHA, there is no immediate reason to initialize at the start,
+/* For SM3, there is no immediate reason to initialize at the start,
    so this function is an empty operation. */
 void initialize_hash_function(spx_ctx *ctx)
 {
@@ -50,7 +44,7 @@ void prf_addr(unsigned char *out, const spx_ctx *ctx,
 /**
  * Computes the message-dependent randomness R, using a secret seed as a key
  * for HMAC, and an optional randomization value prefixed to the message.
- * This requires m to have at least SPX_SHAX_BLOCK_BYTES + SPX_N space
+ * This requires m to have at least SPX_SM3_BLOCK_BYTES + SPX_N space
  * available in front of the pointer, i.e. before the message to use for the
  * prefix. This is necessary to prevent having to move the message around (and
  * allocate memory for it).
@@ -62,47 +56,47 @@ void gen_message_random(unsigned char *R, const unsigned char *sk_prf,
 {
     (void)ctx;
 
-    unsigned char buf[SPX_SHAX_BLOCK_BYTES + SPX_SHAX_OUTPUT_BYTES];
-    uint8_t state[8 + SPX_SHAX_OUTPUT_BYTES];
+    unsigned char buf[SPX_SM3_BLOCK_BYTES + SPX_SM3_OUTPUT_BYTES];
+    uint8_t state[8 + SPX_SM3_OUTPUT_BYTES];
     int i;
 
-#if SPX_N > SPX_SHAX_BLOCK_BYTES
-    #error "Currently only supports SPX_N of at most SPX_SHAX_BLOCK_BYTES"
+#if SPX_N > SPX_SM3_BLOCK_BYTES
+    #error "Currently only supports SPX_N of at most SPX_SM3_BLOCK_BYTES"
 #endif
 
-    /* This implements HMAC-SHA */
+    /* This implements HMAC-SM3 */
     for (i = 0; i < SPX_N; i++) {
         buf[i] = 0x36 ^ sk_prf[i];
     }
-    memset(buf + SPX_N, 0x36, SPX_SHAX_BLOCK_BYTES - SPX_N);
+    memset(buf + SPX_N, 0x36, SPX_SM3_BLOCK_BYTES - SPX_N);
 
-    shaX_inc_init(state);
-    shaX_inc_blocks(state, buf, 1);
+    sm3_inc_init(state);
+    sm3_inc_blocks(state, buf, 1);
 
     memcpy(buf, optrand, SPX_N);
 
     /* If optrand + message cannot fill up an entire block */
-    if (SPX_N + mlen < SPX_SHAX_BLOCK_BYTES) {
+    if (SPX_N + mlen < SPX_SM3_BLOCK_BYTES) {
         memcpy(buf + SPX_N, m, mlen);
-        shaX_inc_finalize(buf + SPX_SHAX_BLOCK_BYTES, state,
+        sm3_inc_finalize(buf + SPX_SM3_BLOCK_BYTES, state,
                             buf, mlen + SPX_N);
     }
     /* Otherwise first fill a block, so that finalize only uses the message */
     else {
-        memcpy(buf + SPX_N, m, SPX_SHAX_BLOCK_BYTES - SPX_N);
-        shaX_inc_blocks(state, buf, 1);
+        memcpy(buf + SPX_N, m, SPX_SM3_BLOCK_BYTES - SPX_N);
+        sm3_inc_blocks(state, buf, 1);
 
-        m += SPX_SHAX_BLOCK_BYTES - SPX_N;
-        mlen -= SPX_SHAX_BLOCK_BYTES - SPX_N;
-        shaX_inc_finalize(buf + SPX_SHAX_BLOCK_BYTES, state, m, mlen);
+        m += SPX_SM3_BLOCK_BYTES - SPX_N;
+        mlen -= SPX_SM3_BLOCK_BYTES - SPX_N;
+        sm3_inc_finalize(buf + SPX_SM3_BLOCK_BYTES, state, m, mlen);
     }
 
     for (i = 0; i < SPX_N; i++) {
         buf[i] = 0x5c ^ sk_prf[i];
     }
-    memset(buf + SPX_N, 0x5c, SPX_SHAX_BLOCK_BYTES - SPX_N);
+    memset(buf + SPX_N, 0x5c, SPX_SM3_BLOCK_BYTES - SPX_N);
 
-    shaX(buf, buf, SPX_SHAX_BLOCK_BYTES + SPX_SHAX_OUTPUT_BYTES);
+    sm3(buf, buf, SPX_SM3_BLOCK_BYTES + SPX_SM3_OUTPUT_BYTES);
     memcpy(R, buf, SPX_N);
 }
 
@@ -123,49 +117,49 @@ void hash_message(unsigned char *digest, uint64_t *tree, uint32_t *leaf_idx,
 #define SPX_LEAF_BYTES ((SPX_LEAF_BITS + 7) / 8)
 #define SPX_DGST_BYTES (SPX_FORS_MSG_BYTES + SPX_TREE_BYTES + SPX_LEAF_BYTES)
 
-    unsigned char seed[2*SPX_N + SPX_SHAX_OUTPUT_BYTES];
+    unsigned char seed[2*SPX_N + SPX_SM3_OUTPUT_BYTES];
 
-    /* Round to nearest multiple of SPX_SHAX_BLOCK_BYTES */
-#if (SPX_SHAX_BLOCK_BYTES & (SPX_SHAX_BLOCK_BYTES-1)) != 0
-    #error "Assumes that SPX_SHAX_BLOCK_BYTES is a power of 2"
+    /* Round to nearest multiple of SPX_SM3_BLOCK_BYTES */
+#if (SPX_SM3_BLOCK_BYTES & (SPX_SM3_BLOCK_BYTES-1)) != 0
+    #error "Assumes that SPX_SM3_BLOCK_BYTES is a power of 2"
 #endif
-#define SPX_INBLOCKS (((SPX_N + SPX_PK_BYTES + SPX_SHAX_BLOCK_BYTES - 1) & \
-                        -SPX_SHAX_BLOCK_BYTES) / SPX_SHAX_BLOCK_BYTES)
-    unsigned char inbuf[SPX_INBLOCKS * SPX_SHAX_BLOCK_BYTES];
+#define SPX_INBLOCKS (((SPX_N + SPX_PK_BYTES + SPX_SM3_BLOCK_BYTES - 1) & \
+                        -SPX_SM3_BLOCK_BYTES) / SPX_SM3_BLOCK_BYTES)
+    unsigned char inbuf[SPX_INBLOCKS * SPX_SM3_BLOCK_BYTES];
 
     unsigned char buf[SPX_DGST_BYTES];
     unsigned char *bufp = buf;
-    uint8_t state[8 + SPX_SHAX_OUTPUT_BYTES];
+    uint8_t state[8 + SPX_SM3_OUTPUT_BYTES];
 
-    shaX_inc_init(state);
+    sm3_inc_init(state);
 
-    // seed: SHA-X(R ‖ PK.seed ‖ PK.root ‖ M)
+    // seed: SM3(R ‖ PK.seed ‖ PK.root ‖ M)
     memcpy(inbuf, R, SPX_N);
     memcpy(inbuf + SPX_N, pk, SPX_PK_BYTES);
 
     /* If R + pk + message cannot fill up an entire block */
-    if (SPX_N + SPX_PK_BYTES + mlen < SPX_INBLOCKS * SPX_SHAX_BLOCK_BYTES) {
+    if (SPX_N + SPX_PK_BYTES + mlen < SPX_INBLOCKS * SPX_SM3_BLOCK_BYTES) {
         memcpy(inbuf + SPX_N + SPX_PK_BYTES, m, mlen);
-        shaX_inc_finalize(seed + 2*SPX_N, state, inbuf, SPX_N + SPX_PK_BYTES + mlen);
+        sm3_inc_finalize(seed + 2*SPX_N, state, inbuf, SPX_N + SPX_PK_BYTES + mlen);
     }
     /* Otherwise first fill a block, so that finalize only uses the message */
     else {
         memcpy(inbuf + SPX_N + SPX_PK_BYTES, m,
-               SPX_INBLOCKS * SPX_SHAX_BLOCK_BYTES - SPX_N - SPX_PK_BYTES);
-        shaX_inc_blocks(state, inbuf, SPX_INBLOCKS);
+               SPX_INBLOCKS * SPX_SM3_BLOCK_BYTES - SPX_N - SPX_PK_BYTES);
+        sm3_inc_blocks(state, inbuf, SPX_INBLOCKS);
 
-        m += SPX_INBLOCKS * SPX_SHAX_BLOCK_BYTES - SPX_N - SPX_PK_BYTES;
-        mlen -= SPX_INBLOCKS * SPX_SHAX_BLOCK_BYTES - SPX_N - SPX_PK_BYTES;
-        shaX_inc_finalize(seed + 2*SPX_N, state, m, mlen);
+        m += SPX_INBLOCKS * SPX_SM3_BLOCK_BYTES - SPX_N - SPX_PK_BYTES;
+        mlen -= SPX_INBLOCKS * SPX_SM3_BLOCK_BYTES - SPX_N - SPX_PK_BYTES;
+        sm3_inc_finalize(seed + 2*SPX_N, state, m, mlen);
     }
 
-    // H_msg: MGF1-SHA-X(R ‖ PK.seed ‖ seed)
+    // H_msg: MGF1-SM3(R ‖ PK.seed ‖ seed)
     memcpy(seed, R, SPX_N);
     memcpy(seed + SPX_N, pk, SPX_N);
 
     /* By doing this in two steps, we prevent hashing the message twice;
        otherwise each iteration in MGF1 would hash the message again. */
-    mgf1_X(bufp, SPX_DGST_BYTES, seed, 2*SPX_N + SPX_SHAX_OUTPUT_BYTES);
+    mgf1_X(bufp, SPX_DGST_BYTES, seed, 2*SPX_N + SPX_SM3_OUTPUT_BYTES);
 
     memcpy(digest, bufp, SPX_FORS_MSG_BYTES);
     bufp += SPX_FORS_MSG_BYTES;
