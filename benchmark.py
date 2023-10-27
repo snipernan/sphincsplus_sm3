@@ -7,10 +7,8 @@ from subprocess import DEVNULL, run
 
 implementations = [
                     ('sm3-avx2', ['sm3']),      
-                    #('sha2-avx2', ['sha2']),
-                    #('shake-avx2', [ 'shake' ]),
-                    #('shake-a64', [ 'shake' ]),
-                    ('ref', [ 'sm3' ]),
+                    ('sha2-avx2', ['sha2']),
+                    ('ref', [ 'sm3', 'sha2' ]),
                    ]
 
 options = ["f", "s"]
